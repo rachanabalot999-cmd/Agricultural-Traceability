@@ -1,86 +1,66 @@
-🌾 Agricultural Traceability on Blockchain
+# Agricultural Traceability
 
-A transparent and immutable system for tracking agricultural products (e.g., crops, produce) across the entire supply chain, from the initial farm stage to the final retailer.
+## Overview
 
-📝 Project Overview
+Agricultural Traceability is a decentralized platform that leverages blockchain technology to enable transparent, secure, and tamper-proof tracking of agricultural products from farm to consumer. By providing end-to-end visibility, it ensures product authenticity, improves food safety, and builds trust across the supply chain.
 
-This Solidity smart contract establishes a foundation for decentralized Supply Chain Traceability. By leveraging the Ethereum Virtual Machine (EVM), we ensure that the lifecycle of every product batch is logged and immutable, providing verifiable proof of origin and handling history.
+## Key Features
 
-⚙️ Technology and Features
+- Unique product tracking using digital and QR-based IDs
+- Immutable record of each stage from farm to market
+- Consumer access to production and distribution history
+- Enhanced food safety and rapid recall management
+- Increased transparency and credibility for producers and retailers
 
-Core Technologies
+## System Flow
 
-Solidity (v0.8.0+): The smart contract programming language.
+1. **Farmers:** Register crops and generate product IDs
+2. **Distributors:** Update shipping and handling events
+3. **Retailers:** Confirm receipt and provide product information to consumers
+4. **Consumers:** Scan QR code to verify product origin and journey
 
-Ethereum Virtual Machine (EVM): The deployment and execution environment.
+## Technology Stack
 
-Smart Contract Features (Traceability.sol)
+- **Smart Contracts:** Solidity
+- **Blockchain Platform:** Ethereum or compatible network
+- **Frontend:** React or similar (optional)
+- **Tools:** Hardhat, Truffle, or Foundry for development and testing
 
-This table shows the primary functions and their purpose in the supply chain workflow:
+## Getting Started
 
-Function/Feature
+1. Clone the repository:
+    ```
+    git clone https://github.com/your-username/agricultural-traceability.git
+    cd agricultural-traceability
+    ```
 
-Description
+2. Install dependencies:
+    ```
+    npm install
+    ```
 
-Visibility
+3. Compile smart contracts:
+    ```
+    npx hardhat compile
+    ```
 
-registerBatch()
+4. Deploy the contracts (customize network as needed):
+    ```
+    npx hardhat run scripts/deploy.js --network <network>
+    ```
 
-Initiates traceability by creating a new ProductBatch and setting the stage to Planted.
+## Advantages
 
-public
+- Increases product reliability and consumer trust
+- Supports transparent and verifiable marketing claims
+- Streamlines recall in case of food safety issues
+- Helps comply with regulatory requirements
 
-updateStage()
+## Contributing
 
-Allows the current owner to move the batch to the next sequential Stage (e.g., Harvested, Processed). Logs location and timestamp.
+Contributions are welcome! Please fork the repository and submit pull requests for review.
 
-public
+## License
 
-transferOwnership()
+[MIT](LICENSE)
 
-Transfers the digital control of the batch record to the next entity in the supply chain (e.g., from a Farmer to a Processor).
-
-public
-
-withdrawBalance()
-
-Owner-only function to withdraw any Ether accidentally sent to the contract.
-
-public onlyOwner
-
-productBatches
-
-Public mapping used to retrieve full details (current stage, location, owner) of any batch using its unique ID.
-
-public view
-
-💡 Traceability Workflow Example
-
-The system enforces a sequential process, requiring ownership transfer and stage updates to maintain a verifiable audit trail:
-
-Farmer A calls registerBatch(). (Stage: Planted)
-
-Farmer A calls updateStage(Stage.Harvested).
-
-Farmer A transfers control: transferOwnership(ProcessorB_Address).
-
-Processor B calls updateStage(Stage.Processed).
-
-...The product moves through the chain until marked as ReceivedByRetailer.
-
-🚀 Getting Started
-
-If you are setting up this project, you will need to compile the Solidity code (Traceability.sol) and deploy it to an EVM-compatible network.
-
-Compilation
-
-# Example command using Hardhat or Truffle configuration
-npx hardhat compile
-# or
-truffle compile
-
-
-
-Deployment
-
-The address that deploys the contract is automatically set as the owner with administrative rights (like the ability to run withdrawBalance()).
