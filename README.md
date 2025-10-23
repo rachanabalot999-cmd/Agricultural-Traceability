@@ -4,29 +4,19 @@ A transparent and immutable system for tracking agricultural products (e.g., cro
 
 📝 Project Overview
 
-This Solidity smart contract establishes a foundation for decentralized Supply Chain Traceability. By leveraging the Ethereum Virtual Machine (EVM), we ensure that the lifecycle of every product batch is logged and immutable. This gives consumers, regulators, and supply chain partners verifiable proof of origin, handling steps, and current ownership.
-
-Workflow Summary
-
-The system logs a product through the following steps:
-
-Registration: The product is created by the farmer and registered as Planted.
-
-Ownership Transfer: The current owner transfers control of the batch record to the next party (e.g., from Farmer to Processor).
-
-Stage Updates: The new owner updates the product's status (e.g., to Harvested, Processed, Shipped).
+This Solidity smart contract establishes a foundation for decentralized Supply Chain Traceability. By leveraging the Ethereum Virtual Machine (EVM), we ensure that the lifecycle of every product batch is logged and immutable, providing verifiable proof of origin and handling history.
 
 ⚙️ Technology and Features
 
 Core Technologies
 
-Solidity (v0.8.0+): The programming language for the smart contract.
+Solidity (v0.8.0+): The smart contract programming language.
 
 Ethereum Virtual Machine (EVM): The deployment and execution environment.
 
-keccak256: Used to generate unique, verifiable IDs for each product batch.
-
 Smart Contract Features (Traceability.sol)
+
+This table shows the primary functions and their purpose in the supply chain workflow:
 
 Function/Feature
 
@@ -42,55 +32,58 @@ public
 
 updateStage()
 
-Allows the current owner to move the batch to the next sequential Stage. Logs location and timestamp.
+Allows the current owner to move the batch to the next sequential Stage (e.g., Harvested, Processed). Logs location and timestamp.
 
 public
 
 transferOwnership()
 
-Transfers the digital control of the batch record to the next entity in the supply chain (e.g., from a Harvester to a Processor).
+Transfers the digital control of the batch record to the next entity in the supply chain (e.g., from a Farmer to a Processor).
 
 public
 
+withdrawBalance()
+
+Owner-only function to withdraw any Ether accidentally sent to the contract.
+
+public onlyOwner
+
 productBatches
 
-A public mapping used to retrieve full details (current stage, location, owner) of any batch using its unique ID.
+Public mapping used to retrieve full details (current stage, location, owner) of any batch using its unique ID.
 
 public view
 
-Stage Enum
-
-Defines the fixed lifecycle steps: Planted, Harvested, Processed, Shipped, ReceivedByRetailer.
-
-Internal
-
 💡 Traceability Workflow Example
 
-This example demonstrates the key steps of ownership and stage progression for a batch of corn:
+The system enforces a sequential process, requiring ownership transfer and stage updates to maintain a verifiable audit trail:
 
-Farmer A registers the batch: registerBatch("Organic Corn", "FARM-001", "Field 5"). (Stage: Planted)
+Farmer A calls registerBatch(). (Stage: Planted)
 
-Farmer A updates the status: updateStage(productId, Stage.Harvested, "Barn Storage").
+Farmer A calls updateStage(Stage.Harvested).
 
-Farmer A transfers control: transferOwnership(productId, ProcessorB_Address).
+Farmer A transfers control: transferOwnership(ProcessorB_Address).
 
-Processor B receives control and updates: updateStage(productId, Stage.Processed, "Processing Plant").
+Processor B calls updateStage(Stage.Processed).
 
-...The process continues until the product is marked as ReceivedByRetailer.
-
-⚠️ Security and Development Notes
-
-Identity Management: This contract relies on the honesty of the transacting addresses (msg.sender). For real-world use, a system with stronger off-chain identity verification (KYC) would be required to tie addresses to legal entities.
-
-Data Integrity: The blockchain ensures the history of updates is immutable, but it cannot verify the truthfulness of the data (e.g., whether the reported location is accurate). This relies on the integrity of the current batch owner.
+...The product moves through the chain until marked as ReceivedByRetailer.
 
 🚀 Getting Started
 
-To compile and deploy this contract locally:
+If you are setting up this project, you will need to compile the Solidity code (Traceability.sol) and deploy it to an EVM-compatible network.
 
-Compilation (using solc):
+Compilation
 
-npx solc --bin Traceability.sol
+# Example command using Hardhat or Truffle configuration
+npx hardhat compile
+# or
+truffle compile
+
+
+Deployment
+
+The address that deploys the contract is automatically set as the owner with administrative rights (like the ability to run withdrawBalance()).
+
 
 
 Deployment: Deploy the compiled bytecode to an EVM-compatible network (like Sepolia or a local development chain). The deploying address automatically becomes the owner with administrative rights.
