@@ -80,10 +80,7 @@ npx hardhat compile
 truffle compile
 
 
+
 Deployment
 
 The address that deploys the contract is automatically set as the owner with administrative rights (like the ability to run withdrawBalance()).
-
-
-
-Deployment: Deploy the compiled bytecode to an EVM-compatible network (like Sepolia or a local development chain). The deploying address automatically becomes the owner with administrative rights.
