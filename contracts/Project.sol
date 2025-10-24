@@ -1,145 +1,116 @@
 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 contract AgriculturalTraceability {
-    // --- STATE VARIABLES ---
+    enum Stage { Planted, Harvested, Processed, Shipped, ReceivedByRetailer }
 
-    // Define the different stages a product can be in
-    enum Stage {
-        Planted,
-        Harvested,
-        Processed,
-        Shipped,
-        ReceivedByRetailer
-    }
-
-    // A structure to hold the details of a tracked product batch
     struct ProductBatch {
-        string productName;
-        string batchId;
-        address owner;
+        uint256 batchId;
+        address currentOwner;
         Stage currentStage;
+        uint256 creationTimestamp;
+        EventRecord[] history;
+    }
+
+    struct EventRecord {
         uint256 timestamp;
+        Stage stage;
         string location;
+        address entity;
+        string description;
     }
 
-    // Mapping from a unique ID (hash of batchId) to the ProductBatch details
-    mapping(bytes32 => ProductBatch) public productBatches;
+    uint256 private nextBatchId = 1;
+    mapping(uint256 => ProductBatch) public productBatches;
 
-    // Address of the contract deployer (the 'Owner')
-    address public owner;
+    event BatchRegistered(uint256 indexed batchId, address indexed harvester, uint256 timestamp);
+    event StageUpdated(uint256 indexed batchId, Stage newStage, string location);
+    event OwnershipTransferred(uint256 indexed batchId, address indexed oldOwner, address indexed newOwner);
 
-    // --- EVENTS ---
-    event ProductRegistered(bytes32 indexed productId, string batchId, address indexed owner, Stage stage);
-    event StageUpdated(bytes32 indexed productId, Stage newStage, address indexed updater, string location);
-    // [NEW EVENT] Added for transparency in fund withdrawal
-    event BalanceWithdrawn(address indexed recipient, uint256 amount);
-
-
-    // --- MODIFIER ---
-
-    // Restricts a function's execution to only the contract owner/deployer
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only the contract owner can call this function.");
-        _;
-    }
-
-    // --- CONSTRUCTOR ---
-    constructor() {
-        owner = msg.sender;
-    }
-
-    // --- CORE FUNCTIONS ---
-
-    /**
-     * @notice Registers a new product batch into the system, typically by the farmer.
-     * @param _name The name of the product (e.g., "Organic Apples").
-     * @param _id A unique identifier for the batch (e.g., "FARM-B1-2025").
-     * @param _location The initial planting location.
-     */
-    function registerBatch(string memory _name, string memory _id, string memory _location) public {
-        bytes32 productId = keccak256(abi.encodePacked(_id));
+    function registerBatch(string memory _location, string memory _description) public returns (uint256) {
+        uint256 newId = nextBatchId;
         
-        // Ensure this batch ID hasn't been used yet
-        require(productBatches[productId].owner == address(0), "Batch ID already registered.");
-        
-        productBatches[productId] = ProductBatch({
-            productName: _name,
-            batchId: _id,
-            owner: msg.sender,
-            currentStage: Stage.Planted,
+        EventRecord memory initialEvent = EventRecord({
             timestamp: block.timestamp,
-            location: _location
+            stage: Stage.Planted,
+            location: _location,
+            entity: msg.sender,
+            description: string(abi.encodePacked("Batch registered and planted: ", _description))
         });
 
-        emit ProductRegistered(productId, _id, msg.sender, Stage.Planted);
+        ProductBatch storage newBatch = productBatches[newId];
+        newBatch.batchId = newId;
+        newBatch.currentOwner = msg.sender;
+        newBatch.currentStage = Stage.Planted;
+        newBatch.creationTimestamp = block.timestamp;
+        newBatch.history.push(initialEvent);
+
+        nextBatchId++;
+
+        emit BatchRegistered(newId, msg.sender, block.timestamp);
+        return newId;
     }
 
-    /**
-     * @notice Updates the stage of a product batch in the supply chain.
-     * @param _productId The unique hash ID of the batch.
-     * @param _newStage The new stage (e.g., Harvested, Processed, Shipped).
-     * @param _location The physical location where the update occurred.
-     */
-    function updateStage(bytes32 _productId, Stage _newStage, string memory _location) public {
-        ProductBatch storage batch = productBatches[_productId];
-        
-        // Ensure the batch exists and the caller is the current owner
-        require(batch.owner != address(0), "Batch not found.");
-        require(batch.owner == msg.sender, "Only the current batch owner can update the stage.");
-        
-        // Ensure the new stage is logically after the current stage
-        require(_newStage > batch.currentStage, "Stage update must be sequential.");
+    function updateStage(uint256 _batchId, string memory _location, string memory _description) public {
+        ProductBatch storage batch = productBatches[_batchId];
+        require(batch.batchId != 0, "Batch does not exist.");
+        require(batch.currentOwner == msg.sender, "Only the current owner can update the stage.");
+        require(uint8(batch.currentStage) < uint8(Stage.ReceivedByRetailer), "Batch has completed all stages.");
 
-        // Update the batch details
-        batch.currentStage = _newStage;
-        batch.timestamp = block.timestamp;
-        batch.location = _location;
+        Stage nextStage = Stage(uint8(batch.currentStage) + 1);
+        batch.currentStage = nextStage;
 
-        emit StageUpdated(_productId, _newStage, msg.sender, _location);
+        EventRecord memory newEvent = EventRecord({
+            timestamp: block.timestamp,
+            stage: nextStage,
+            location: _location,
+            entity: msg.sender,
+            description: _description
+        });
+        batch.history.push(newEvent);
+
+        emit StageUpdated(_batchId, nextStage, _location);
     }
-    
-    /**
-     * @notice Allows the current owner of the batch to transfer ownership to the next party.
-     * @param _productId The unique hash ID of the batch.
-     * @param _newOwner The address of the next party in the supply chain.
-     */
-    function transferOwnership(bytes32 _productId, address _newOwner) public {
-        ProductBatch storage batch = productBatches[_productId];
-        
-        require(batch.owner == msg.sender, "Only the current batch owner can transfer ownership.");
+
+    function transferOwnership(uint256 _batchId, address _newOwner) public {
+        ProductBatch storage batch = productBatches[_batchId];
+        require(batch.batchId != 0, "Batch does not exist.");
+        require(batch.currentOwner == msg.sender, "Only the current owner can transfer ownership.");
         require(_newOwner != address(0), "New owner address cannot be zero.");
-        
-        batch.owner = _newOwner;
+
+        address oldOwner = batch.currentOwner;
+        batch.currentOwner = _newOwner;
+
+        EventRecord memory newEvent = EventRecord({
+            timestamp: block.timestamp,
+            stage: batch.currentStage,
+            location: "Ownership Transfer",
+            entity: msg.sender,
+            description: string(abi.encodePacked("Ownership transferred to: ", addressToString(_newOwner)))
+        });
+        batch.history.push(newEvent);
+
+        emit OwnershipTransferred(_batchId, oldOwner, _newOwner);
     }
 
-    /**
-     * @notice View function to retrieve the current stage string for a batch.
-     * @param _productId The unique hash ID of the batch.
-     */
-    function getCurrentStageString(bytes32 _productId) public view returns (string memory) {
-        Stage stage = productBatches[_productId].currentStage;
-        
-        if (stage == Stage.Planted) return "Planted";
-        if (stage == Stage.Harvested) return "Harvested";
-        if (stage == Stage.Processed) return "Processed";
-        if (stage == Stage.Shipped) return "Shipped";
-        if (stage == Stage.ReceivedByRetailer) return "Received By Retailer";
-        
-        return "Unknown";
-    }
-    
-    // [NEW FUNCTION] Added to handle accidental Ether sent to the contract
-    /**
-     * @notice Allows the owner to withdraw any Ether accidentally sent to the contract.
-     */
-    function withdrawBalance() public onlyOwner {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "Contract balance is zero.");
+    function addressToString(address _addr) internal pure returns(string memory) {
+        bytes32 value = bytes32(uint256(uint160(_addr)));
+        bytes memory alphabet = "0123456789abcdef";
 
-        (bool success, ) = payable(owner).call{value: balance}("");
-        require(success, "Withdrawal failed.");
-        
-        emit BalanceWithdrawn(owner, balance);
+        bytes memory str = new bytes(42);
+        str[0] = '0';
+        str[1] = 'x';
+        for (uint i = 0; i < 20; i++) {
+            str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
+            str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
+        }
+        return string(str);
+    }
+
+    function getBatchHistory(uint256 _batchId) public view returns (EventRecord[] memory) {
+        require(productBatches[_batchId].batchId != 0, "Batch does not exist.");
+        return productBatches[_batchId].history;
     }
 }
+
