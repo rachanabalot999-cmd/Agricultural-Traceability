@@ -1,31 +1,25 @@
 const hre = require("hardhat");
 
 async function main() {
-  const [deployer] = await hre.ethers.getSigners();
-  console.log("Deploying contract with the account:", deployer.address);
-  console.log("Account balance:", (await hre.ethers.provider.getBalance(deployer.address)).toString());
+  console.log("Deploying Project contract...");
 
-  // 1. Get the Contract Factory for AgriculturalTraceability
-  const AgriculturalTraceability = await hre.ethers.getContractFactory("AgriculturalTraceability");
+  const Project = await hre.ethers.getContractFactory("Project");
+  const project = await Project.deploy();
 
-  // 2. Deploy the contract (no constructor arguments needed)
-  const traceability = await AgriculturalTraceability.deploy();
+  await project.deployed();
 
-  // 3. Wait for the deployment to be confirmed on the network
-  await traceability.waitForDeployment();
-  
-  const contractAddress = await traceability.getAddress();
-
-  // 4. Log the deployed address for future interaction
-  console.log("AgriculturalTraceability deployed to:", contractAddress);
+  console.log("Project deployed to:", project.address);
+  // Optionally print etherscan link or explorer link if known for Core Testnet 2
 }
 
-// Execute the deployment script
 main()
   .then(() => process.exit(0))
   .catch((error) => {
     console.error(error);
     process.exit(1);
   });
+
+  });
+
 
 
