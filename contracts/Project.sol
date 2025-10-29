@@ -1,116 +1,108 @@
-
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.19;
 
-contract AgriculturalTraceability {
-    enum Stage { Planted, Harvested, Processed, Shipped, ReceivedByRetailer }
+/// @title Agricultural Traceability - Project.sol
+/// @notice Simple traceability registry for agricultural batches
+contract Project {
+    uint256 private nextId;
 
-    struct ProductBatch {
-        uint256 batchId;
-        address currentOwner;
-        Stage currentStage;
-        uint256 creationTimestamp;
-        EventRecord[] history;
+    struct Trace {
+        uint256 id;
+        string batchId;       // external batch identifier
+        string farmer;        // farmer name or identifier
+        string location;      // origin location
+        uint256 timestamp;    // when recorded
+        string details;       // extra details (crop type, weight, etc.)
+        string status;        // e.g., "harvested", "shipped", "processed"
+        address recorder;     // who recorded this entry
     }
 
-    struct EventRecord {
-        uint256 timestamp;
-        Stage stage;
-        string location;
-        address entity;
-        string description;
+    // id => Trace
+    mapping(uint256 => Trace) private traces;
+    // batchId => latest trace id (optional quick lookup for latest)
+    mapping(string => uint256) private latestByBatch;
+
+    event TraceRecorded(uint256 indexed id, string batchId, address recorder);
+    event TraceUpdated(uint256 indexed id, string newStatus, address updater);
+
+    constructor() {
+        nextId = 1;
     }
 
-    uint256 private nextBatchId = 1;
-    mapping(uint256 => ProductBatch) public productBatches;
-
-    event BatchRegistered(uint256 indexed batchId, address indexed harvester, uint256 timestamp);
-    event StageUpdated(uint256 indexed batchId, Stage newStage, string location);
-    event OwnershipTransferred(uint256 indexed batchId, address indexed oldOwner, address indexed newOwner);
-
-    function registerBatch(string memory _location, string memory _description) public returns (uint256) {
-        uint256 newId = nextBatchId;
-        
-        EventRecord memory initialEvent = EventRecord({
+    /// @notice Record a new trace entry for a batch
+    /// @param batchId external identifier for the batch
+    /// @param farmer farmer name or id
+    /// @param location origin location
+    /// @param details extra details like crop, weight, notes
+    /// @param status initial status
+    /// @return id internal numeric id for the trace
+    function recordTrace(
+        string calldata batchId,
+        string calldata farmer,
+        string calldata location,
+        string calldata details,
+        string calldata status
+    ) external returns (uint256) {
+        uint256 id = nextId++;
+        traces[id] = Trace({
+            id: id,
+            batchId: batchId,
+            farmer: farmer,
+            location: location,
             timestamp: block.timestamp,
-            stage: Stage.Planted,
-            location: _location,
-            entity: msg.sender,
-            description: string(abi.encodePacked("Batch registered and planted: ", _description))
+            details: details,
+            status: status,
+            recorder: msg.sender
         });
-
-        ProductBatch storage newBatch = productBatches[newId];
-        newBatch.batchId = newId;
-        newBatch.currentOwner = msg.sender;
-        newBatch.currentStage = Stage.Planted;
-        newBatch.creationTimestamp = block.timestamp;
-        newBatch.history.push(initialEvent);
-
-        nextBatchId++;
-
-        emit BatchRegistered(newId, msg.sender, block.timestamp);
-        return newId;
+        latestByBatch[batchId] = id;
+        emit TraceRecorded(id, batchId, msg.sender);
+        return id;
     }
 
-    function updateStage(uint256 _batchId, string memory _location, string memory _description) public {
-        ProductBatch storage batch = productBatches[_batchId];
-        require(batch.batchId != 0, "Batch does not exist.");
-        require(batch.currentOwner == msg.sender, "Only the current owner can update the stage.");
-        require(uint8(batch.currentStage) < uint8(Stage.ReceivedByRetailer), "Batch has completed all stages.");
-
-        Stage nextStage = Stage(uint8(batch.currentStage) + 1);
-        batch.currentStage = nextStage;
-
-        EventRecord memory newEvent = EventRecord({
-            timestamp: block.timestamp,
-            stage: nextStage,
-            location: _location,
-            entity: msg.sender,
-            description: _description
-        });
-        batch.history.push(newEvent);
-
-        emit StageUpdated(_batchId, nextStage, _location);
+    /// @notice Update status and details of an existing trace entry
+    /// @param id internal numeric id returned when created
+    /// @param newStatus new status string
+    /// @param newDetails optional updated details
+    function updateTrace(uint256 id, string calldata newStatus, string calldata newDetails) external {
+        require(id > 0 && id < nextId, "Trace: invalid id");
+        Trace storage t = traces[id];
+        // allow anyone to update in this simple example — production should restrict
+        t.status = newStatus;
+        t.details = newDetails;
+        emit TraceUpdated(id, newStatus, msg.sender);
     }
 
-    function transferOwnership(uint256 _batchId, address _newOwner) public {
-        ProductBatch storage batch = productBatches[_batchId];
-        require(batch.batchId != 0, "Batch does not exist.");
-        require(batch.currentOwner == msg.sender, "Only the current owner can transfer ownership.");
-        require(_newOwner != address(0), "New owner address cannot be zero.");
-
-        address oldOwner = batch.currentOwner;
-        batch.currentOwner = _newOwner;
-
-        EventRecord memory newEvent = EventRecord({
-            timestamp: block.timestamp,
-            stage: batch.currentStage,
-            location: "Ownership Transfer",
-            entity: msg.sender,
-            description: string(abi.encodePacked("Ownership transferred to: ", addressToString(_newOwner)))
-        });
-        batch.history.push(newEvent);
-
-        emit OwnershipTransferred(_batchId, oldOwner, _newOwner);
+    /// @notice Retrieve a trace by its internal id
+    /// @param id internal numeric id
+    /// @return Trace struct fields
+    function getTrace(uint256 id) public view returns (
+        uint256,
+        string memory,
+        string memory,
+        string memory,
+        uint256,
+        string memory,
+        string memory,
+        address
+    ) {
+        require(id > 0 && id < nextId, "Trace: invalid id");
+        Trace storage t = traces[id];
+        return (
+            t.id,
+            t.batchId,
+            t.farmer,
+            t.location,
+            t.timestamp,
+            t.details,
+            t.status,
+            t.recorder
+        );
     }
 
-    function addressToString(address _addr) internal pure returns(string memory) {
-        bytes32 value = bytes32(uint256(uint160(_addr)));
-        bytes memory alphabet = "0123456789abcdef";
-
-        bytes memory str = new bytes(42);
-        str[0] = '0';
-        str[1] = 'x';
-        for (uint i = 0; i < 20; i++) {
-            str[2+i*2] = alphabet[uint(uint8(value[i + 12] >> 4))];
-            str[3+i*2] = alphabet[uint(uint8(value[i + 12] & 0x0f))];
-        }
-        return string(str);
-    }
-
-    function getBatchHistory(uint256 _batchId) public view returns (EventRecord[] memory) {
-        require(productBatches[_batchId].batchId != 0, "Batch does not exist.");
-        return productBatches[_batchId].history;
+    /// @notice Get the latest trace id for a given batchId (0 if none)
+    function getLatestByBatch(string calldata batchId) external view returns (uint256) {
+        return latestByBatch[batchId];
     }
 }
+
 
