@@ -1,66 +1,41 @@
-# Agricultural Traceability
+# agricultural tracebillity
 
-## Overview
+## Project Description
+Agricultural Tracebillity is a lightweight blockchain-based traceability registry for agricultural batches. It enables recording, updating, and retrieving trace entries for produce batches (farmer, origin, status, timestamp and details), stored immutably on-chain.
 
-Agricultural Traceability is a decentralized platform that leverages blockchain technology to enable transparent, secure, and tamper-proof tracking of agricultural products from farm to consumer. By providing end-to-end visibility, it ensures product authenticity, improves food safety, and builds trust across the supply chain.
+## Project Vision
+To provide a simple, auditable, on-chain trail for agricultural goods so supply-chain participants (farmers, processors, distributors, and consumers) can verify origin and status of produce and reduce fraud or mislabeling.
 
 ## Key Features
+- Record new trace entries with batch ID, farmer, location, details, and status.
+- Update trace status and details (e.g., mark as shipped or processed).
+- Retrieve full trace details by internal ID and get the latest entry for a batch ID.
+- Small, auditable contract: minimal logic to keep gas costs low.
+- Ready-to-deploy on Core Testnet 2.
 
-- Unique product tracking using digital and QR-based IDs
-- Immutable record of each stage from farm to market
-- Consumer access to production and distribution history
-- Enhanced food safety and rapid recall management
-- Increased transparency and credibility for producers and retailers
+## Future Scope
+- Access control: role-based updates (farmer, processor, inspector).
+- Off-chain indexing + events + subgraph for easy querying.
+- Batch-level history retrieval and pagination.
+- Integration with IoT sensors / QR-code generation for consumers.
+- Data confidentiality options (e.g., store sensitive details off-chain, keep hashes on-chain).
 
-## System Flow
+## Setup & Deployment
+1. Clone the repo and `cd agricultural-tracebillity`.
+2. `cp .env.example .env` and set `PRIVATE_KEY` and optionally `CORE_TESTNET2_RPC`.
+3. `npm install` (or `yarn`).
+4. `npx hardhat compile`
+5. `npx hardhat run scripts/deploy.js --network coreTestnet2`
 
-1. **Farmers:** Register crops and generate product IDs
-2. **Distributors:** Update shipping and handling events
-3. **Retailers:** Confirm receipt and provide product information to consumers
-4. **Consumers:** Scan QR code to verify product origin and journey
+## Files Included
+- `contracts/Project.sol` — main smart contract.
+- `scripts/deploy.js` — deploy script for Core Testnet 2.
+- `hardhat.config.js` — network config (Core Testnet 2 RPC).
+- `.gitignore`, `.env.example`, `package.json`.
 
-## Technology Stack
+## Notes
+- This repository is a starting point; add role-based access control for production.
+- Keep your deployer private key offline or in a secure signer for mainnet deployments.
 
-- **Smart Contracts:** Solidity
-- **Blockchain Platform:** Ethereum or compatible network
-- **Frontend:** React or similar (optional)
-- **Tools:** Hardhat, Truffle, or Foundry for development and testing
 
-## Getting Started
-
-1. Clone the repository:
-    ```
-    git clone https://github.com/your-username/agricultural-traceability.git
-    cd agricultural-traceability
-    ```
-
-2. Install dependencies:
-    ```
-    npm install
-    ```
-
-3. Compile smart contracts:
-    ```
-    npx hardhat compile
-    ```
-
-4. Deploy the contracts (customize network as needed):
-    ```
-    npx hardhat run scripts/deploy.js --network <network>
-    ```
-
-## Advantages
-
-- Increases product reliability and consumer trust
-- Supports transparent and verifiable marketing claims
-- Streamlines recall in case of food safety issues
-- Helps comply with regulatory requirements
-
-## Contributing
-
-Contributions are welcome! Please fork the repository and submit pull requests for review.
-
-## License
-
-[MIT](LICENSE)
 
