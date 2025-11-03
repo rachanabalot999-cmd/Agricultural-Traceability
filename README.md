@@ -36,6 +36,12 @@ To provide a simple, auditable, on-chain trail for agricultural goods so supply-
 ## Notes
 - This repository is a starting point; add role-based access control for production.
 - Keep your deployer private key offline or in a secure signer for mainnet deployments.
+  
+## Deployment Details
+**Network:** Core Blockchain Testnet2  
+**Contract Address:** `0x12831e1e02b372e73e03Ae377532Ee8B679A511d`  
+**Deployed by:** Rachana Balot  
+**Date:** November 3, 2025
 
 
 
